@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Predict · Cricket Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">🏏</span>
+                <span class="logo-text">IPL<span class="logo-accent">PREDICT</span></span>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-tab="predictor">Predictor</button>
+                <button class="nav-btn" data-tab="stats">IPL Stats</button>
+                <button class="nav-btn" data-tab="players">Players</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- PREDICTOR TAB -->
+    <main class="tab-content active" id="tab-predictor">
+        <div class="hero-text">
+            <h1>WHO WINS<br><span class="text-accent">TODAY?</span></h1>
+            <p class="hero-sub">ML-powered match predictions using historical IPL data</p>
+        </div>
+
+        <div class="predictor-layout">
+            <!-- Left: Team Selection -->
+            <div class="card selector-card">
+                <h2 class="card-title">Match Setup</h2>
+
+                <div class="team-vs-row">
+                    <div class="team-pick" id="team1-pick">
+                        <label>TEAM 1</label>
+                        <select id="team1-select" class="team-select">
+                            <option value="">Select Team</option>
+                            {% for team in teams %}
+                            <option value="{{ team }}">{{ team }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="team-badge" id="badge1">—</div>
+                    </div>
+                    <div class="vs-divider">VS</div>
+                    <div class="team-pick" id="team2-pick">
+                        <label>TEAM 2</label>
+                        <select id="team2-select" class="team-select">
+                            <option value="">Select Team</option>
+                            {% for team in teams %}
+                            <option value="{{ team }}">{{ team }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="team-badge" id="badge2">—</div>
+                    </div>
+                </div>
+
+                <div class="match-details">
+                    <div class="detail-group">
+                        <label>VENUE</label>
+                        <select id="venue-select" class="detail-select">
+                            <option value="">Select Venue</option>
+                            {% for venue in venues %}
+                            <option value="{{ venue }}">{{ venue }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="detail-group">
+                        <label>TOSS WINNER</label>
+                        <select id="toss-winner-select" class="detail-select">
+                            <option value="">Select Team</option>
+                        </select>
+                    </div>
+                    <div class="detail-group">
+                        <label>TOSS DECISION</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" data-value="bat" id="toss-bat">BAT</button>
+                            <button class="toggle-btn" data-value="field" id="toss-field">FIELD</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="predict-btn" id="predict-btn">
+                    <span class="btn-text">PREDICT WINNER</span>
+                    <span class="btn-icon">⚡</span>
+                </button>
+            </div>
+
+            <!-- Right: Results -->
+            <div class="results-col">
+                <div class="card result-card" id="result-panel" style="display:none">
+                    <div class="winner-banner" id="winner-banner">
+                        <span class="winner-label">PREDICTED WINNER</span>
+                        <div class="winner-name" id="winner-name">—</div>
+                    </div>
+
+                    <!-- Win Probability Bar -->
+                    <div class="prob-section">
+                        <div class="prob-header">
+                            <span id="t1-name-bar">Team 1</span>
+                            <span class="prob-label">WIN PROBABILITY</span>
+                            <span id="t2-name-bar">Team 2</span>
+                        </div>
+                        <div class="prob-bar-wrap">
+                            <div class="prob-bar-fill t1-fill" id="t1-bar"></div>
+                            <div class="prob-bar-fill t2-fill" id="t2-bar"></div>
+                        </div>
+                        <div class="prob-vals">
+                            <span id="t1-pct">0%</span>
+                            <span id="t2-pct">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Model Comparison Chart -->
+                    <div class="chart-section">
+                        <h3 class="section-label">MODEL COMPARISON</h3>
+                        <canvas id="model-chart" height="160"></canvas>
+                    </div>
+
+                    <!-- Model Accuracies -->
+                    <div class="model-accuracy-row">
+                        <div class="model-chip">
+                            <span class="model-name">Logistic Regression</span>
+                            <span class="model-acc" id="lr-acc">—</span>
+                        </div>
+                        <div class="model-chip">
+                            <span class="model-name">Random Forest</span>
+                            <span class="model-acc" id="rf-acc">—</span>
+                        </div>
+                    </div>
+
+                    <!-- H2H -->
+                    <div class="h2h-section" id="h2h-section">
+                        <h3 class="section-label">HEAD TO HEAD</h3>
+                        <div class="h2h-row">
+                            <div class="h2h-team">
+                                <div class="h2h-wins" id="h2h-t1-wins">0</div>
+                                <div class="h2h-name" id="h2h-t1-name">Team 1</div>
+                            </div>
+                            <div class="h2h-total" id="h2h-total">of 0 matches</div>
+                            <div class="h2h-team">
+                                <div class="h2h-wins" id="h2h-t2-wins">0</div>
+                                <div class="h2h-name" id="h2h-t2-name">Team 2</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card placeholder-card" id="placeholder-panel">
+                    <div class="placeholder-inner">
+                        <div class="placeholder-icon">🏆</div>
+                        <p>Select teams & match details<br>to see the prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- IPL STATS TAB -->
+    <main class="tab-content" id="tab-stats">
+        <div class="hero-text">
+            <h1>IPL<br><span class="text-accent">STATISTICS</span></h1>
+            <p class="hero-sub">Historical performance data across all seasons</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card span2">
+                <h2 class="card-title">Season-wise Champions</h2>
+                <canvas id="season-chart" height="100"></canvas>
+            </div>
+            <div class="card">
+                <h2 class="card-title">Team Performance</h2>
+                <select id="team-stats-select" class="detail-select mb">
+                    <option value="">Select Team</option>
+                    {% for team in teams %}
+                    <option value="{{ team }}">{{ team }}</option>
+                    {% endfor %}
+                </select>
+                <div id="team-stats-result"></div>
+            </div>
+            <div class="card">
+                <h2 class="card-title">Venue Analysis</h2>
+                <select id="venue-stats-select" class="detail-select mb">
+                    <option value="">Select Venue</option>
+                    {% for venue in venues %}
+                    <option value="{{ venue }}">{{ venue }}</option>
+                    {% endfor %}
+                </select>
+                <div id="venue-stats-result"></div>
+            </div>
+            <div class="card span2">
+                <h2 class="card-title">Head-to-Head Comparison</h2>
+                <div class="h2h-selectors">
+                    <select id="h2h-team1" class="detail-select">
+                        <option value="">Team 1</option>
+                        {% for team in teams %}
+                        <option value="{{ team }}">{{ team }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="vs-badge">VS</span>
+                    <select id="h2h-team2" class="detail-select">
+                        <option value="">Team 2</option>
+                        {% for team in teams %}
+                        <option value="{{ team }}">{{ team }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="small-btn" id="h2h-btn">COMPARE</button>
+                </div>
+                <canvas id="h2h-chart" height="100" style="display:none"></canvas>
+                <div id="h2h-summary"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PLAYERS TAB -->
+    <main class="tab-content" id="tab-players">
+        <div class="hero-text">
+            <h1>PLAYER<br><span class="text-accent">STATS</span></h1>
+            <p class="hero-sub">All-time IPL batting & bowling leaderboards</p>
+        </div>
+
+        <div class="players-grid" id="players-grid">
+            <div class="loading-state">Loading player data...</div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
